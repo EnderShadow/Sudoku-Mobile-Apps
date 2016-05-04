@@ -11,6 +11,7 @@ import UIKit
 class ViewController: UIViewController
 {
     var labels : [SudokuCell] = []
+    var showValues = true
     
     override func viewDidLoad()
     {
@@ -24,6 +25,7 @@ class ViewController: UIViewController
         }
         labels.forEach { label in
             view.addSubview(label)
+            label.addGestureRecognizer(UITapGestureRecognizer(target: label, action: #selector(label.onTap)))
         }
         
         for i in 0...9
@@ -38,7 +40,110 @@ class ViewController: UIViewController
             view.addSubview(line)
         }
         
+        var middle = labels[76].frame.origin
+        middle.x += labels[76].frame.width / 2
+        middle.y += labels[76].frame.height * 1.75
+        
+        let modeButton = UIButton()
+        modeButton.setTitle("Toggle Mode", forState: .Normal)
+        modeButton.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        modeButton.titleLabel?.textAlignment = .Center
+        modeButton.titleLabel?.font = UIFont.systemFontOfSize(15)
+        modeButton.frame = CGRect(x: middle.x - 160, y: middle.y, width: 100, height: 5)
+        modeButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.toggleCells)))
+        
+        let newGridButton = UIButton()
+        newGridButton.setTitle("New Board", forState: .Normal)
+        newGridButton.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        newGridButton.titleLabel?.textAlignment = .Center
+        newGridButton.titleLabel?.font = UIFont.systemFontOfSize(15)
+        newGridButton.frame = CGRect(x: middle.x - 50, y: middle.y, width: 100, height: 5)
+        newGridButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.newBoard)))
+        
+        let solveButton = UIButton()
+        solveButton.setTitle("Solve for Me", forState: .Normal)
+        solveButton.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        solveButton.titleLabel?.textAlignment = .Center
+        solveButton.titleLabel?.font = UIFont.systemFontOfSize(15)
+        solveButton.frame = CGRect(x: middle.x + 60, y: middle.y, width: 100, height: 5)
+        solveButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.solve)))
+        
+        let checkButton = UIButton()
+        checkButton.setTitle("Check Me", forState: .Normal)
+        checkButton.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        checkButton.titleLabel?.textAlignment = .Center
+        checkButton.titleLabel?.font = UIFont.systemFontOfSize(15)
+        checkButton.frame = CGRect(x: middle.x - 50, y: middle.y + 30, width: 100, height: 5)
+        checkButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.checkGrid)))
+        
+        view.addSubview(modeButton)
+        view.addSubview(newGridButton)
+        view.addSubview(solveButton)
+        view.addSubview(checkButton)
+        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.hideKeyboard)))
+        
         generatePuzzle()
+    }
+    
+    func toggleCells()
+    {
+        labels.filter({($0.chosenValueLabel.text!.isEmpty && showValues) || $0.chosenValueLabel.hidden}).forEach({$0.toggleMode()})
+        showValues = !showValues
+    }
+    
+    func newBoard()
+    {
+        let confirmController = UIAlertController(title: "Are you sure you want to get a new board?", message: nil, preferredStyle: .Alert)
+        confirmController.addAction(UIAlertAction(title: "Yes", style: .Default, handler: { (action) in
+            self._newBoard()
+        }))
+        confirmController.addAction(UIAlertAction(title: "No", style: .Default, handler: nil))
+        presentViewController(confirmController, animated: true, completion: nil)
+        
+    }
+    
+    func _newBoard()
+    {
+        let generatingController = UIAlertController(title: nil, message: "Generating new board", preferredStyle: .Alert)
+        presentViewController(generatingController, animated: false, completion: nil)
+        labels.forEach({$0.reset()})
+        generatePuzzle()
+        generatingController.dismissViewControllerAnimated(true, completion: nil)
+    }
+    
+    func solve()
+    {
+        let confirmController = UIAlertController(title: "Are you sure you want to see the solution?", message: nil, preferredStyle: .Alert)
+        confirmController.addAction(UIAlertAction(title: "Yes", style: .Default, handler: { (action) in
+            Solver.solve(self, revertAfterSolve: false)
+        }))
+        confirmController.addAction(UIAlertAction(title: "No", style: .Default, handler: nil))
+        presentViewController(confirmController, animated: true, completion: nil)
+    }
+    
+    func checkGrid()
+    {
+        let valid = isValid()
+        if valid != nil && valid!
+        {
+            let winController = UIAlertController(title: "Congratulations", message: "You won!", preferredStyle: .Alert)
+            winController.addAction(UIAlertAction(title: "New Game", style: .Default, handler: { (action) in
+                self._newBoard()
+            }))
+            winController.addAction(UIAlertAction(title: "Ok", style: .Default, handler: nil))
+            presentViewController(winController, animated: true, completion: nil)
+        }
+        else
+        {
+            let loseController = UIAlertController(title: "Sorry", message: "You haven't won yet", preferredStyle: .Alert)
+            loseController.addAction(UIAlertAction(title: "Ok", style: .Default, handler: nil))
+            presentViewController(loseController, animated: true, completion: nil)
+        }
+    }
+    
+    func hideKeyboard()
+    {
+        labels.forEach({$0.chosenValueLabel.resignFirstResponder()})
     }
     
     func getRow(index: Int) -> [Int]
@@ -167,12 +272,30 @@ class ViewController: UIViewController
     
     func generatePuzzle()
     {
-        var frame = SudokuBoardFrame(sudokuBoard: self, index: 80)
+        let frame = SudokuBoardFrame(sudokuBoard: self, index: 80)
         frame.tryPossibilities()
         
         print(labels.map({$0.value!}))
         
-        // TODO create holes
+        // create holes
+        var filledSlots = Array(0..<81)
+        for _ in 0..<(20 + Int(arc4random_uniform(UInt32(60))))
+        {
+            let _index = Int(arc4random_uniform(UInt32(filledSlots.count)))
+            let index = filledSlots[_index]
+            let oldVal = labels[index].value
+            labels[index].value = ""
+            if !Solver.solve(self)
+            {
+                labels[index].value = oldVal
+            }
+            else
+            {
+                filledSlots.removeAtIndex(_index)
+            }
+        }
+        labels.filter({$0.value!.isEmpty}).forEach({$0.chosenValueLabel.enabled = true; $0.font = UIFont.systemFontOfSize($0.font.pointSize)})
+        labels.filter({!$0.value!.isEmpty}).forEach({$0.chosenValueLabel.enabled = false; $0.font = UIFont.boldSystemFontOfSize($0.font.pointSize)})
     }
     
     func getPossibilities(index: Int) -> [Int]

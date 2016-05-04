@@ -12,8 +12,11 @@ class Solver
 {
     static func solve(sudokuBoard: ViewController, revertAfterSolve: Bool = true) -> Bool
     {
+        if !revertAfterSolve
+        {
+            sudokuBoard.labels.filter({$0.chosenValueLabel.enabled}).forEach({$0.value = ""})
+        }
         var emptyIndices: [Int] = []
-        let origEmptyIndices = emptyIndices
         for i in 0..<81
         {
             if sudokuBoard.labels[i].value!.isEmpty
@@ -21,20 +24,19 @@ class Solver
                 emptyIndices.append(i)
             }
         }
+        let origEmptyIndices = emptyIndices
         
         let iterationsMax = emptyIndices.count
         var iterations = 0
         while emptyIndices.count > 0 && iterations < iterationsMax
         {
-            for var i = 0; i < emptyIndices.count; i += 1
+            for (index, value) in emptyIndices.enumerate().reverse()
             {
-                let value = emptyIndices[i]
                 let possibilities = sudokuBoard.getPossibilities(value)
                 if possibilities.count == 1
                 {
                     sudokuBoard.labels[value].value = "\(possibilities[0])"
-                    emptyIndices.removeAtIndex(i)
-                    i -= 1
+                    emptyIndices.removeAtIndex(index)
                 }
             }
             iterations += 1
@@ -42,9 +44,12 @@ class Solver
         
         let success = emptyIndices.count == 0
         
-        for i in origEmptyIndices
+        if revertAfterSolve
         {
-            sudokuBoard.labels[i].value = ""
+            for i in origEmptyIndices
+            {
+                sudokuBoard.labels[i].value = ""
+            }
         }
         
         return success

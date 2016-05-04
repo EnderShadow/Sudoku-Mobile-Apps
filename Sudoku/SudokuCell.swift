@@ -29,21 +29,22 @@ class SudokuCell: UIView
         }
         get
         {
-            return chosenValueLabel.font
+            return chosenValueLabel.font!
         }
     }
     
-    var chosenValueLabel: UILabel!
+    var chosenValueLabel: UITextField!
     var potentialValueLabels: [UILabel] = []
     
     override init(frame: CGRect)
     {
         super.init(frame: frame)
         
-        chosenValueLabel = UILabel(frame: CGRect(x: 30, y: 30, width: 60, height: 60))
+        chosenValueLabel = UITextField(frame: CGRect(x: 30, y: 30, width: 60, height: 60))
         chosenValueLabel.text = ""
         chosenValueLabel.textAlignment = NSTextAlignment.Center
         chosenValueLabel.adjustsFontSizeToFitWidth = true
+        chosenValueLabel.keyboardType = .NumberPad
         addSubview(chosenValueLabel)
         
         for i in 0..<9
@@ -53,6 +54,7 @@ class SudokuCell: UIView
             label.textAlignment = NSTextAlignment.Center
             label.adjustsFontSizeToFitWidth = true
             label.hidden = true
+            label.textColor = UIColor.grayColor()
             potentialValueLabels.append(label)
             addSubview(label)
         }
@@ -62,10 +64,11 @@ class SudokuCell: UIView
     {
         super.init(coder: aDecoder)
         
-        chosenValueLabel = UILabel(frame: CGRect(x: 30, y: 30, width: 60, height: 60))
+        chosenValueLabel = UITextField(frame: CGRect(x: 30, y: 30, width: 60, height: 60))
         chosenValueLabel.text = "0"
         chosenValueLabel.textAlignment = NSTextAlignment.Center
         chosenValueLabel.adjustsFontSizeToFitWidth = true
+        chosenValueLabel.keyboardType = .NumberPad
         addSubview(chosenValueLabel)
         
         for i in 0..<9
@@ -75,6 +78,7 @@ class SudokuCell: UIView
             label.textAlignment = NSTextAlignment.Center
             label.adjustsFontSizeToFitWidth = true
             label.hidden = true
+            label.textColor = UIColor.grayColor()
             potentialValueLabels.append(label)
             addSubview(label)
         }
@@ -96,26 +100,75 @@ class SudokuCell: UIView
     
     func togglePossibility(value: Int)
     {
-        if chosenValueLabel.hidden
-        {
-            potentialValueLabels[value - 1].hidden = _possibilitiesVisible[value - 1]
-        }
         _possibilitiesVisible[value - 1] = !_possibilitiesVisible[value - 1]
+        if _possibilitiesVisible[value - 1]
+        {
+            potentialValueLabels[value - 1].textColor = UIColor.blackColor()
+        }
+        else
+        {
+            potentialValueLabels[value - 1].textColor = UIColor.grayColor()
+        }
     }
     
     func toggleMode()
     {
         if chosenValueLabel.hidden
         {
-            potentialValueLabels.forEach({$0.hidden = true})
             chosenValueLabel.hidden = false
+            potentialValueLabels.forEach({$0.hidden = true})
         }
         else
         {
             chosenValueLabel.hidden = true
-            for i in 0..<9
+            potentialValueLabels.forEach({$0.hidden = false})
+        }
+    }
+    
+    func reset()
+    {
+        chosenValueLabel.text = ""
+        chosenValueLabel.hidden = false
+        potentialValueLabels.forEach({$0.hidden = true})
+        for (index, value) in _possibilitiesVisible.enumerate()
+        {
+            if value
             {
-                potentialValueLabels[i].hidden = !_possibilitiesVisible[i]
+                togglePossibility(index + 1)
+            }
+        }
+    }
+    
+    func onTap()
+    {
+        if chosenValueLabel.hidden
+        {
+            // TODO show possibility selection menu
+            print("tap")
+            
+            // show popup for (de)selecting potential values
+            //getParentViewController()
+        }
+    }
+}
+
+extension UIResponder
+{
+    func getParentViewController() -> UIViewController?
+    {
+        if self.nextResponder() is UIViewController
+        {
+            return self.nextResponder() as? UIViewController
+        }
+        else
+        {
+            if self.nextResponder() != nil
+            {
+                return self.nextResponder()!.getParentViewController()
+            }
+            else
+            {
+                return nil
             }
         }
     }
