@@ -44,13 +44,21 @@ class ViewController: UIViewController
         middle.x += labels[76].frame.width / 2
         middle.y += labels[76].frame.height * 1.75
         
-        let modeButton = UIButton()
-        modeButton.setTitle("Toggle Mode", forState: .Normal)
-        modeButton.setTitleColor(UIColor.blueColor(), forState: .Normal)
-        modeButton.titleLabel?.textAlignment = .Center
-        modeButton.titleLabel?.font = UIFont.systemFontOfSize(15)
-        modeButton.frame = CGRect(x: middle.x - 160, y: middle.y, width: 100, height: 5)
-        modeButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.toggleCells)))
+        //let modeButton = UIButton()
+        //modeButton.setTitle("Toggle Mode", forState: .Normal)
+        //modeButton.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        //modeButton.titleLabel?.textAlignment = .Center
+        //modeButton.titleLabel?.font = UIFont.systemFontOfSize(15)
+        //modeButton.frame = CGRect(x: middle.x - 160, y: middle.y, width: 100, height: 5)
+        //modeButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.toggleCells)))
+        
+        let clearButton = UIButton()
+        clearButton.setTitle("Clear Board", forState: .Normal)
+        clearButton.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        clearButton.titleLabel?.textAlignment = .Center
+        clearButton.titleLabel?.font = UIFont.systemFontOfSize(15)
+        clearButton.frame = CGRect(x: middle.x - 160, y: middle.y, width: 100, height: 5)
+        clearButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.clearBoard)))
         
         let newGridButton = UIButton()
         newGridButton.setTitle("New Board", forState: .Normal)
@@ -76,7 +84,8 @@ class ViewController: UIViewController
         checkButton.frame = CGRect(x: middle.x - 50, y: middle.y + 30, width: 100, height: 5)
         checkButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.checkGrid)))
         
-        view.addSubview(modeButton)
+        //view.addSubview(modeButton)
+        view.addSubview(clearButton)
         view.addSubview(newGridButton)
         view.addSubview(solveButton)
         view.addSubview(checkButton)
@@ -89,6 +98,16 @@ class ViewController: UIViewController
     {
         labels.filter({($0.chosenValueLabel.text!.isEmpty && showValues) || $0.chosenValueLabel.hidden}).forEach({$0.toggleMode()})
         showValues = !showValues
+    }
+    
+    func clearBoard()
+    {
+        let confirmController = UIAlertController(title: "Are you sure you want to clear the board?", message: nil, preferredStyle: .Alert)
+        confirmController.addAction(UIAlertAction(title: "Yes", style: .Default, handler: { (action) in
+            self.labels.filter({$0.chosenValueLabel.enabled}).forEach({$0.chosenValueLabel.text = ""})
+        }))
+        confirmController.addAction(UIAlertAction(title: "No", style: .Default, handler: nil))
+        presentViewController(confirmController, animated: true, completion: nil)
     }
     
     func newBoard()
@@ -105,10 +124,11 @@ class ViewController: UIViewController
     func _newBoard()
     {
         let generatingController = UIAlertController(title: nil, message: "Generating new board", preferredStyle: .Alert)
-        presentViewController(generatingController, animated: false, completion: nil)
-        labels.forEach({$0.reset()})
-        generatePuzzle()
-        generatingController.dismissViewControllerAnimated(true, completion: nil)
+        presentViewController(generatingController, animated: true, completion: {
+            self.labels.forEach({$0.reset()})
+            self.generatePuzzle()
+            generatingController.dismissViewControllerAnimated(true, completion: nil)
+        })
     }
     
     func solve()
@@ -133,9 +153,15 @@ class ViewController: UIViewController
             winController.addAction(UIAlertAction(title: "Ok", style: .Default, handler: nil))
             presentViewController(winController, animated: true, completion: nil)
         }
+        else if Solver.solve(self) && !isInvalid()
+        {
+            let progressController = UIAlertController(title: "Doing good", message: "So far so good.", preferredStyle: .Alert)
+            progressController.addAction(UIAlertAction(title: "Ok", style: .Default, handler: nil))
+            presentViewController(progressController, animated: true, completion: nil)
+        }
         else
         {
-            let loseController = UIAlertController(title: "Sorry", message: "You haven't won yet", preferredStyle: .Alert)
+            let loseController = UIAlertController(title: "Sorry", message: "This isn't correct", preferredStyle: .Alert)
             loseController.addAction(UIAlertAction(title: "Ok", style: .Default, handler: nil))
             presentViewController(loseController, animated: true, completion: nil)
         }
